@@ -390,6 +390,17 @@ void printOpCode() {
     printf("\n");
 }
 
+void printOpCodeFile() {
+    FILE *fp;
+    fp = fopen("output.txt", "w");
+    for (int i = 0; i < opIndex; i++) {
+
+        if (i % 3 == 0 && i != 0) {
+            fprintf(fp,"\n");
+        }
+        fprintf(fp,"%d ", opCode[i]);
+    }
+}
 //function that converts chars to numbers
 int numConvert(char *val) {
 
@@ -1047,7 +1058,8 @@ int main(int argc, char *argv[]) {
 
     parser();
     printOpCode();
+    printOpCodeFile();
 
-    printf("\n\nDONE\n");
+
     return 0;
 }
