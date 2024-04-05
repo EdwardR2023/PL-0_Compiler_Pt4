@@ -392,7 +392,7 @@ void printOpCode() {
 
 void printOpCodeFile() {
     FILE *fp;
-    fp = fopen("output.txt", "w");
+    fp = fopen("out.txt", "w");
     for (int i = 0; i < opIndex; i++) {
 
         if (i % 3 == 0 && i != 0) {
