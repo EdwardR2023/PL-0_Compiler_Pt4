@@ -1,0 +1,10 @@
+const x = 2, y = 3, z = 6;
+var a, b, c, d;
+begin
+    a := x + y + z;
+    b := x * y * z;
+    c := x + 4 + 4955;
+    if a = 5 then
+            write 3
+            fi
+end.
