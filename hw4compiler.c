@@ -25,7 +25,7 @@ enum {
 // Token structure
 typedef struct {
     int type;
-    char value[MAX_STR_LEN]; // +1 for null terminator
+    char value[MAX_STR_LEN];
 } Token;
 
 // Array to store tokens
@@ -70,7 +70,7 @@ int lexLevel = -1;
 // Function to check if a word is a keyword and return its token type
 int is_keyword(char *word) {
 
-    if (strcmp(word, "null") == 0) return oddsym;
+    if (strcmp(word, "odd") == 0) return oddsym;
     if (strcmp(word, "begin") == 0) return beginsym;
     if (strcmp(word, "end") == 0) return endsym;
     if (strcmp(word, "if") == 0) return ifsym;
@@ -78,10 +78,10 @@ int is_keyword(char *word) {
     if (strcmp(word, "then") == 0) return thensym;
     if (strcmp(word, "while") == 0) return whilesym;
     if (strcmp(word, "do") == 0) return dosym;
-    //if (strcmp(word, "call") == 0) return callsym;
+    if (strcmp(word, "call") == 0) return callsym;
     if (strcmp(word, "const") == 0) return constsym;
     if (strcmp(word, "var") == 0) return varsym;
-    //if (strcmp(word, "procedure") == 0) return procsym;
+    if (strcmp(word, "procedure") == 0) return procsym;
     if (strcmp(word, "write") == 0) return writesym;
     if (strcmp(word, "read") == 0) return readsym;
     //if (strcmp(word, "else") == 0) return elsesym;
@@ -263,7 +263,7 @@ void tokenize_line(char *line) {
 
 //function to run through our table of variables and constants
 int symbolTableChecker(char *name) {
-    for (int i = 0; i < symbol_count; i++) {
+    for (int i = symbol_count-1 ; i >= 0; i--) {
         if (strcmp(symbols[i].name, name) == 0)
             return i;
     }
@@ -297,7 +297,7 @@ void printSymbolTable() {
 
 //function to all OPCODE generated
 void printOpCode() {
-    printf("LINE\t OP\tM\tL\n");
+    printf("LINE\t OP\tL\tM\n");
     printf("----------------------------");
     for (int i = 0; i < opIndex; i++) {
         if (i % 3 == 0) {
@@ -310,7 +310,7 @@ void printOpCode() {
                 case 2:
                     switch(opCode[i+2]){
                         case 0:
-                        printf("OPR\t");
+                        printf("RTN\t");
                         break;
                         case 1:
                             printf("ADD\t");
@@ -359,7 +359,7 @@ void printOpCode() {
                     break;
 
                 case 5:
-                    printf("CALL\t");
+                    printf("CAL\t");
 
                     break;
 
@@ -450,13 +450,15 @@ int constDeclaration() {
                 exit(-1);
             }
             //if curtoken is an identifier already declared print error and exit
-            if (symbolTableChecker(curToken.value) != -1) {
+            int temp = symbolTableChecker(curToken.value);
+
+            if (temp != -1 && symbols[temp].level == lexLevel)  {
                 printf("\nERROR: symbol name has already been declared\n");
                 exit(-1);
             }
 
 
-            char identName[11];
+            char identName[MAX_IDENT_LEN+1];
 
             //copies the string of the current token(variable or constant) to the
             strcpy(identName, curToken.value);
@@ -482,7 +484,7 @@ int constDeclaration() {
             int num = numConvert(curToken.value);
 
             //adds symbol to the table and assigns its attributes
-            addToSymbolTable(1, identName, num, 0, 0, 0);
+            addToSymbolTable(1, identName, num, lexLevel, 0, 0);
 
             //next token
             curToken = tokens[++parserCount];
@@ -518,17 +520,19 @@ int varDeclaration() {
             }
 
             //if curtoken is an identifier already declared print error and exit
-            if (symbolTableChecker(curToken.value) != -1) {
+            int temp = symbolTableChecker(curToken.value);
+
+            if (temp != -1 && symbols[temp].level == lexLevel) {
                 printf("ERROR: symbol name has already been declared\n");
                 exit(-2);
             }
 
-            char identName[11];
+            char identName[MAX_IDENT_LEN+1];
             //copies the variable string
             strcpy(identName, curToken.value);
 
             //adds the variable to the symbol table with assigned attributes
-            addToSymbolTable(2, identName, 0, 0, numVar + 2, 0);
+            addToSymbolTable(2, identName, 0, lexLevel, numVar + 2, 0);
 
             curToken = tokens[++parserCount];
 
@@ -555,18 +559,23 @@ int procDeclaration(){
             printf("ERROR: procedure must be followed by an identifier\n");
             exit(-6);
         }
+        addToSymbolTable(3,curToken.value,0,lexLevel,opIndex,0);
         curToken = tokens[++parserCount];
+        if (curToken.type != semicolonsym){
+            printf("ERROR: semicolon missing.\n");
+            exit(-6);
+        }
+        ++parserCount;
+
+        Block();
+        emit(2,0,0);
+        curToken = tokens[parserCount];
         if (curToken.type != semicolonsym){
             printf("ERROR: semicolon missing \n");
             exit(-6);
         }
         curToken = tokens[++parserCount];
 
-        Block();
-        if (curToken.type != semicolonsym){
-            printf("ERROR: semicolon missing \n");
-            exit(-6);
-        }
     }
     return 0;
 }
@@ -641,7 +650,7 @@ int Factor() {
 
         //identifier is undeclared
         if (symIdx == -1) {
-            printf("ERROR: undeclared identifier\n");
+            printf("ERROR #11: Undeclared Identifier\n");
             exit(-3);
         }
 
@@ -653,7 +662,7 @@ int Factor() {
         } else { // variable
 
             //emits load
-            emit(3, symbols[symIdx].level, symbols[symIdx].addr);
+            emit(3, lexLevel-symbols[symIdx].level, symbols[symIdx].addr);
             symbols[symIdx].mark = 1;
 
         }
@@ -704,7 +713,9 @@ void Statement() {
 
         //not found in symbol table
         if (symidx == -1) {
-            printf("\nERROR: undeclared identifier\n");
+            printf("\nERROR #11: Undeclared Identifier \n");
+
+            printf("%d\n", symbol_count);
             exit(-4);
         }
 
@@ -728,11 +739,35 @@ void Statement() {
         Expression();
 
         //emits store code
-        emit(4, 0, symbols[symidx].addr);
+        emit(4, lexLevel - symbols[symidx].level, symbols[symidx].addr);
         symbols[symidx].val = total;
         symbols[symidx].mark = 1;
 
         return;
+
+    }
+    else if(curToken.type == callsym){
+        curToken = tokens[++parserCount];
+        if (curToken.type != identsym){
+            printf("ERROR #14: call must be followed by an identifier\n");
+            exit(-4);
+        }
+        int i = symbolTableChecker(curToken.value);
+
+
+        if (i == -1){
+            printf("ERROR #11: Undeclared Identifier");
+
+            exit(-10);
+        }
+        if (symbols[i].kind == 3){
+            emit(5,lexLevel-symbols[i].level,symbols[i].addr);
+        }
+        else{
+            printf("ERROR #15: Call of a constant or variable is meaningless.");
+            exit(-4);
+        }
+        curToken = tokens[++parserCount];
 
     }
     if (curToken.type == beginsym) {
@@ -746,7 +781,7 @@ void Statement() {
 
         } while (curToken.type == semicolonsym);
         if (curToken.type != endsym) {
-            printf("ERROR: begin must be followed by end");
+            printf("ERROR #17: End expected");
             exit(-4);
         }
         //next token
@@ -829,16 +864,16 @@ void Statement() {
             printf("ERROR: read must be followed by an identifier\n");
             exit(-4);
         }
-        int symIdx = symbolTableChecker(curToken.value);
+        int symidx = symbolTableChecker(curToken.value);
 
         //identifier not found
-        if (symIdx == -1) {
+        if (symidx == -1) {
             printf("ERROR: Identifier not found\n");
             exit(-4);
         }
 
         //constant therefore not valid print error and exit
-        if (symbols[symIdx].kind != 2) {
+        if (symbols[symidx].kind != 2) {
             printf("ERROR: Not a variable\n");
             exit(-4);
         }
@@ -849,7 +884,7 @@ void Statement() {
         emit(9, 0, 2);
 
         //emit store
-        emit(4, 0, symbols[symIdx].addr);
+        emit(4, lexLevel - symbols[symidx].level, symbols[symidx].addr);
         return;
     }
     if (curToken.type == writesym) {
@@ -924,10 +959,10 @@ int Condition() {
 void Block(){
 
     lexLevel++;
-
-
+    int prev_sx = symbol_count;
     //this needs to change
-    emit(7, 0, 3);
+    int jmpaddr = opIndex+2;
+    emit(7, 0, -10);
     //jmpaddr = gen(JMP, 0, 666);
 
     int numVar;
@@ -939,15 +974,13 @@ void Block(){
     procDeclaration();
 
     //code[jmpaddr].addr = next_code_addr
+    opCode[jmpaddr] = opIndex;
 
     //emit inc
     emit(6, 0, numVar + 3);
 
     Statement();
-
-    //emits return
-    emit(2,0,0);
-
+    symbol_count = prev_sx;
     lexLevel--;
 }
 void parser() {
@@ -984,23 +1017,20 @@ int main(int argc, char *argv[]) {
         tokenize_line(line);
     }
 
-    /* printf("\n\nLEXEME TABLE\n\nLexeme\t\t\tToken Type\n");
+    //printf("\n\nLEXEME TABLE\n\nLexeme\t\t\tToken Type\n");
      for (int i = 0; i < token_count; i++) {
-
-         if (tokens[i].type > 0)
-             printf("%s\t\t\t%d\n", tokens[i].value, tokens[i].type);
-         else if (tokens[i].type == -1) {
-             printf("%s\t\t\tERROR: INVALID SYMBOL\n", tokens[i].value);
+         if (tokens[i].type == -1) {
+             printf("ERROR: INVALID SYMBOL '%s'\n", tokens[i].value);
              return 0;
          } else if (tokens[i].type == -2) {
-             printf("%s\t\tERROR: IDENTIFIER IS TOO LONG\n", tokens[i].value);
+             printf("ERROR: IDENTIFIER IS TOO LONG '%s'\n", tokens[i].value);
              return 0;
          } else if (tokens[i].type == -3) {
-             printf("%s\t\t\tERROR: NUMBER IS TOO LONG\n", tokens[i].value);
+             printf("ERROR: NUMBER IS TOO LONG '%s'\n", tokens[i].value);
              return 0;
          }
 
-     }*/
+     }
 
     /* printf("\nTOKEN LIST\n");
      for (int i = 0; i < token_count; i++) {
@@ -1017,7 +1047,7 @@ int main(int argc, char *argv[]) {
 
     parser();
     printOpCode();
-    printSymbolTable();
+
     printf("\n\nDONE\n");
     return 0;
 }
