@@ -45,10 +45,11 @@ A period is used to indicate the end of the definition of a syntactic class.
 
 ## Input Format
 The input file should contain the PL/0 source code.
-Compile with gcc parsercodegen.c
+Compile with gcc hw4compiler.c
 ./a.out input.txt
 
 ## Output
-If the program does not follow the grammar, a message indicating the type of error presented.
-Else if the program follows the grammer then the generated OPCODE is printed as well as the symbol table holding variables and constants.
+If the program does not follow the grammar, a message indicating the type of error is presented.
+Else if the program follows the grammar then the generated OPCODE is printed as well as the symbol table holding variables and constants.
+Output an elf.txt file containing the executable code for the VM
 
