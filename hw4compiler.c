@@ -458,6 +458,7 @@ int constDeclaration() {
             //if curtoken is an identifier we print error and exit
             if (curToken.type != identsym) {
                 printf("\nERROR: const, var, and read keywords must be followed by identifier\n");
+
                 exit(-1);
             }
             //if curtoken is an identifier already declared print error and exit
@@ -1035,10 +1036,10 @@ int main(int argc, char *argv[]) {
     char line[MAX_CODE_LEN];
     //printf("SOURCE PROGRAM:\n");
     while (fgets(line, sizeof(line), file) && halt == 0) {
-        //printf("%s", line);
+        printf("%s", line);
         tokenize_line(line);
     }
-
+    printf("\n\n");
     //printf("\n\nLEXEME TABLE\n\nLexeme\t\t\tToken Type\n");
      for (int i = 0; i < token_count; i++) {
          if (tokens[i].type == -1) {
@@ -1065,9 +1066,11 @@ int main(int argc, char *argv[]) {
 
 
      }*/
+
     fclose(file);
 
     parser();
+    printf("\n\nNO ERRORS, PROGRAM IS SYNTACTICALLY CORRECT\n\n");
     printOpCode();
     printOpCodeFile();
 
