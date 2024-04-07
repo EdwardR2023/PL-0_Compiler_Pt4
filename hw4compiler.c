@@ -262,8 +262,8 @@ void tokenize_line(char *line) {
 }
 
 //function to run through our table of variables and constants
-int symbolTableChecker(char *name) {
-    for (int i = symbol_count-1 ; i >= 0; i--) {
+int symbolTableChecker(char *name, int startInd) {
+    for (int i = startInd ; i >= 0; i--) {
         if (strcmp(symbols[i].name, name) == 0)
             return i;
     }
@@ -461,7 +461,7 @@ int constDeclaration() {
                 exit(-1);
             }
             //if curtoken is an identifier already declared print error and exit
-            int temp = symbolTableChecker(curToken.value);
+            int temp = symbolTableChecker(curToken.value, symbol_count-1);
 
             if (temp != -1 && symbols[temp].level == lexLevel)  {
                 printf("\nERROR: symbol name has already been declared\n");
@@ -531,10 +531,10 @@ int varDeclaration() {
             }
 
             //if curtoken is an identifier already declared print error and exit
-            int temp = symbolTableChecker(curToken.value);
+            int temp = symbolTableChecker(curToken.value, symbol_count-1);
 
             if (temp != -1 && symbols[temp].level == lexLevel) {
-                printf("ERROR: symbol name has already been declared\n");
+                printf("\nERROR: symbol name has already been declared\n");
                 exit(-2);
             }
 
@@ -570,6 +570,7 @@ int procDeclaration(){
             printf("ERROR: procedure must be followed by an identifier\n");
             exit(-6);
         }
+
         addToSymbolTable(3,curToken.value,0,lexLevel,opIndex,0);
         curToken = tokens[++parserCount];
         if (curToken.type != semicolonsym){
@@ -657,15 +658,21 @@ int Factor() {
     Token curToken = tokens[parserCount];
 
     if (curToken.type == identsym) {
-        symIdx = symbolTableChecker(curToken.value);
+        symIdx = symbolTableChecker(curToken.value, symbol_count-1);
 
         //identifier is undeclared
         if (symIdx == -1) {
-            printf("ERROR #11: Undeclared Identifier\n");
+            printf("ERROR: Undeclared Identifier\n");
             exit(-3);
         }
 
-        if (symbols[symIdx].kind == 1) {//const
+        if(symbols[symIdx].kind == 3){ //procedure
+
+            printf("ERROR: expression must not contain a procedure identifier");
+            exit(-3);
+        }
+
+        if(symbols[symIdx].kind == 1) {//const
 
             //emits literal
             emit(1, 0, symbols[symIdx].val);
@@ -720,20 +727,24 @@ void Statement() {
 
     //if an identifier
     if (curToken.type == identsym) {
-        int symidx = symbolTableChecker(curToken.value);
+        int symidx = symbolTableChecker(curToken.value, symbol_count-1);
 
         //not found in symbol table
         if (symidx == -1) {
-            printf("\nERROR #11: Undeclared Identifier \n");
+            printf("\nERROR: Undeclared Identifier \n");
 
             printf("%d\n", symbol_count);
             exit(-4);
         }
 
         //symbol was a constant and cant be modified thus print error and exit
-        if (symbols[symidx].kind != 2) {
-            printf("\n ERROR: only variable values may be altered\n");
-            exit(-4);
+        while (symbols[symidx].kind != 2) {
+            symidx = symbolTableChecker(curToken.value, symidx-1);
+
+            if(symidx == -1) {
+                printf("\n ERROR: only variable values may be altered\n");
+                exit(-4);
+            }
         }
 
         //next token
@@ -760,14 +771,14 @@ void Statement() {
     else if(curToken.type == callsym){
         curToken = tokens[++parserCount];
         if (curToken.type != identsym){
-            printf("ERROR #14: call must be followed by an identifier\n");
+            printf("ERROR: call must be followed by an identifier\n");
             exit(-4);
         }
-        int i = symbolTableChecker(curToken.value);
+        int i = symbolTableChecker(curToken.value, symbol_count-1);
 
 
         if (i == -1){
-            printf("ERROR #11: Undeclared Identifier");
+            printf("ERROR: Undeclared Identifier");
 
             exit(-10);
         }
@@ -775,7 +786,7 @@ void Statement() {
             emit(5,lexLevel-symbols[i].level,symbols[i].addr);
         }
         else{
-            printf("ERROR #15: Call of a constant or variable is meaningless.");
+            printf("ERROR: Call of a constant or variable is meaningless.");
             exit(-4);
         }
         curToken = tokens[++parserCount];
@@ -792,7 +803,7 @@ void Statement() {
 
         } while (curToken.type == semicolonsym);
         if (curToken.type != endsym) {
-            printf("ERROR #17: End expected");
+            printf("ERROR: End expected");
             exit(-4);
         }
         //next token
@@ -875,7 +886,7 @@ void Statement() {
             printf("ERROR: read must be followed by an identifier\n");
             exit(-4);
         }
-        int symidx = symbolTableChecker(curToken.value);
+        int symidx = symbolTableChecker(curToken.value, symbol_count-1);
 
         //identifier not found
         if (symidx == -1) {
